@@ -1,0 +1,43 @@
+# Node / Vue
+node_modules/
+dist/
+
+# Build output
+dist/
+build/
+
+# Python / Backend
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.sqlite3
+*.egg-info/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+#other log files
+*.log
+logs/
+*.out
+
+# IDE / OS files
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Optional: temporary files
+*.tmp
+
+trash/
