@@ -109,6 +109,7 @@ backend/
 ├─ venv/ # virtual environment
 └─ requirements.txt
 ```
+---
 ### other files
 ```bash
 flatten_JSON.py
