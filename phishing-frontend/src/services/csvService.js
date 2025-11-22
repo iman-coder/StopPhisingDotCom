@@ -1,7 +1,7 @@
 // src/services/csvService.js
 import axios from "axios";
 
-const API = "http://localhost:8080/urls";
+const API = "http://localhost:8000/urls";
 
 export async function exportCSV() {
     const response = await axios.get(`${API}/export`, {

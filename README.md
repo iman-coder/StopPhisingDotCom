@@ -95,19 +95,29 @@ frontend/
 
 ```bash
 backend/
-├─ app/
-│ ├─ main.py # entry point
-│ ├─ models.py # ORM or Pydantic models
-│ ├─ routes/
-│ │ ├─ dashboard.py # dashboard endpoints
-│ │ └─ urls.py # URL CRUD & CSV endpoints
-│ ├─ services/
-│ │ └─ database.py # DB connection & queries
-│ ├─ utils/
-│ │ └─ logger.py # logs collection system
-│ └─ schemas.py # request/response schemas
-├─ venv/ # virtual environment
-└─ requirements.txt
+│
+├── app/
+│   ├── main.py
+│   ├── models.py
+│   ├── schemas.py
+│
+│   ├── routes/
+│   │   ├── urls.py
+│   │   └── dashboard.py
+│
+│   ├── services/
+│   │   ├── csv_service.py
+│   │   ├── url_service.py
+│   │   └── dashboard_service.py
+│
+│   ├── utils/
+│   │   ├── logger.py
+│   │   └── database.py          
+│   │   └── parser.py  (optional)
+│
+│   ├── migrations/
+│
+└── requirements.txt
 ```
 ---
 ### other files

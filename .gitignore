@@ -40,4 +40,7 @@ Thumbs.db
 # Optional: temporary files
 *.tmp
 
+test_db_for_tests.db
+test.db
+
 trash/
