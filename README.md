@@ -129,15 +129,70 @@ README.md
 remove_unwanted_data.py
 urls_merged_crud1.csv #the final URL's collection
 ```
-
-
 **Notes:**
 - `frontend/src/services/` contains all API calls.
 - `frontend/src/components/charts/` has reusable chart components.
 - `backend/app/routes/` separates dashboard and URL management endpoints.
 - `backend/app/utils/logger.py` is for logging URL actions.
 - `venv/` should be added to `.gitignore`.
+---
+# set up commands
+## Backend commands
+### 1. Activate Python environment
+```bash
+# Windows
+venv\Scripts\activate
 
+# Linux / macOS
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+## Database migrations
+```bash
+# Generate a new migration after changing models
+alembic revision --autogenerate -m "migration_name"
+
+# Apply migrations to the database
+alembic upgrade head
+
+# Rollback to a previous migration
+alembic downgrade -1
+
+# Check current database version
+alembic current
+```
+
+## run the backend server
+```bash
+uvicorn app.main:app --reload
+```
+### running the tests
+```bash
+pytest -q
+```
+### Test api endpoints
+```bash
+http GET http://localhost:8000/urls
+http POST http://localhost:8000/urls url="http://example.com" domain="example.com"
+```
+## frontend commands
+### install dependencies
+```bash
+npm install
+```
+### Run development server
+```bash
+npm run dev
+```
+### Build for production
+```bash
+npm run build
+```
+### Preview production build
+```bash
+npm run preview
+```
 ---
 
 ## 4️⃣ Next Steps

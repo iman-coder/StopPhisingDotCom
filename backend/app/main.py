@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routes import urls  # we’ll add dashboard later
+from app.routes import csv as csv_routes
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="URL Dashboard API")
@@ -14,4 +15,5 @@ app.add_middleware(
 )
 
 app.include_router(urls.router)
+app.include_router(csv_routes.router)
 # app.include_router(dashboard.router)  # to be added later

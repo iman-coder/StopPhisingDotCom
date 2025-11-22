@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.utils.database import SessionLocal
 from app.services.csv_service import export_csv, import_csv
+import io
 
 router = APIRouter(prefix="/urls", tags=["CSV"])
 
@@ -17,25 +18,31 @@ def get_db():
 
 @router.get("/export")
 def export_csv_route(db: Session = Depends(get_db)):
-    csv_bytes = export_csv(db)
+    csv_str = export_csv(db)
 
     return StreamingResponse(
-        iter([csv_bytes]),
+        io.BytesIO(csv_str.encode("utf-8")),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=urls.csv"
-        }
+        headers={"Content-Disposition": "attachment; filename=urls.csv"},
     )
 
 
 @router.post("/import")
-def import_csv_route(
+async def import_csv_route(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="File must be a CSV")
 
-    inserted = import_csv(db)
+    # read file contents from UploadFile
+    content_bytes = await file.read()
+    try:
+        content = content_bytes.decode("utf-8")
+    except Exception:
+        # fallback to latin-1 if utf-8 fails
+        content = content_bytes.decode("latin-1")
 
-    return {"detail": f"{inserted} rows imported"}
+    result = import_csv(content, db)
+
+    return result

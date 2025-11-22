@@ -43,7 +43,7 @@ def import_csv(file_content: str, db: Session):
 
     return {
         "inserted": created_count,
-        "skipped": len(skipped)
+        "skipped": len(skipped),
     }
 
 
@@ -65,7 +65,7 @@ def export_csv(db: Session) -> str:
             item.url,
             item.domain,
             item.threat,
-            item.date_added,
+            item.date_added.isoformat() if item.date_added is not None else "",
             item.status,
             item.source,
         ])

@@ -21,7 +21,9 @@ def update_url(db: Session, url_id: int, url_data: URLUpdate):
     if not db_url:
         raise HTTPException(status_code=404, detail="URL not found")
 
-    for key, value in url_data.dict().items():
+    # Only update fields that were explicitly provided and are not None
+    updates = url_data.dict(exclude_unset=True, exclude_none=True)
+    for key, value in updates.items():
         setattr(db_url, key, value)
 
     db.commit()

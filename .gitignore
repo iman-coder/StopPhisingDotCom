@@ -8,6 +8,9 @@ build/
 
 # Python / Backend
 venv/
+# Local env files and sqlite DBs
+backend/.env
+backend/*.db
 __pycache__/
 *.py[cod]
 *.pyo
@@ -42,5 +45,6 @@ Thumbs.db
 
 test_db_for_tests.db
 test.db
+*.db
 
 trash/
