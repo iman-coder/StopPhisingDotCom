@@ -16,20 +16,23 @@ def import_csv(file_content: str, db: Session):
     created_count = 0
     skipped = []
 
+    # preload existing URLs from DB to avoid unique constraint violations
+    existing_urls = set([r[0] for r in db.query(URL.url).all()]) if db.query(URL).count() > 0 else set()
+    seen = set()
+
     for row in reader:
         url_value = row.get("url")
         if not url_value:
             skipped.append(row)
             continue
 
-        # Avoid duplicate URLs
-        existing = db.query(URL).filter(URL.url == url_value).first()
-        if existing:
+        # Avoid duplicate URLs (both in DB and already seen in this import)
+        if url_value in existing_urls or url_value in seen:
             skipped.append(row)
             continue
 
         new_url = URL(
-            url=row.get("url"),
+            url=url_value,
             domain=row.get("domain"),
             threat=row.get("threat"),
             status=row.get("status"),
@@ -38,6 +41,7 @@ def import_csv(file_content: str, db: Session):
 
         db.add(new_url)
         created_count += 1
+        seen.add(url_value)
 
     db.commit()
 

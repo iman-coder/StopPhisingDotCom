@@ -48,3 +48,9 @@ test.db
 *.db
 
 trash/
+
+~$apport.docx
+class diagram.txt
+component diagram.txt
+Rapport.docx
+sequence diagram.txt

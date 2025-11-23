@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const API = "http://localhost:8000/dashboard";
-const USE_MOCKS = true; // ⬅ Switch to false to use real backend
+const USE_MOCKS = false; // ⬅ Switch to false to use real backend
 
 /* -------------------------------------------------------
  * MOCK DATA DEFINITIONS
