@@ -34,12 +34,13 @@ def status_distribution(db: Session = Depends(get_db)):
 
 # 3. Domain analytics
 @router.get("/domains")
-def domain_counts(db: Session = Depends(get_db)):
-    return dashboard_service.get_domain_counts_service(db)
+def domain_counts(limit: int = 10, db: Session = Depends(get_db)):
+    """Return domain counts limited to the top `limit` domains (default 10)."""
+    return dashboard_service.get_domain_counts_service(db, limit)
 
 
 @router.get("/domains/top")
-def top_risky_domains(limit: int = 5, db: Session = Depends(get_db)):
+def top_risky_domains(limit: int = 10, db: Session = Depends(get_db)):
     return dashboard_service.get_top_risky_domains_service(db, limit)
 
 
@@ -67,7 +68,8 @@ def recent_urls(limit: int = 10, db: Session = Depends(get_db)):
 
 # 6. Activity feed
 @router.get("/events")
-def recent_events(limit: int = 20, db: Session = Depends(get_db)):
+def recent_events(limit: int = 10, db: Session = Depends(get_db)):
+    """Return recent events (default limit 10)."""
     return dashboard_service.get_recent_events_service(db, limit)
 
 

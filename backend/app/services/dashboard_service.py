@@ -223,13 +223,14 @@ def get_status_distribution_service(db: Session) -> List[Dict[str, Any]]:
     return {r["status"]: r["count"] for r in rows}
 
 
-def get_domain_counts_service(db: Session) -> List[Dict[str, Any]]:
-    rows = get_top_domains(db, limit=100)
+def get_domain_counts_service(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
+    # Return only the top `limit` domains to keep the chart focused.
+    rows = get_top_domains(db, limit=limit)
     # convert list of {domain,count} to mapping {domain: count}
     return {r["domain"]: r["count"] for r in rows}
 
 
-def get_top_risky_domains_service(db: Session, limit: int = 5) -> List[Dict[str, Any]]:
+def get_top_risky_domains_service(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
     return get_top_domains(db, limit=limit)
 
 
@@ -259,8 +260,8 @@ def get_recent_urls_service(db: Session, limit: int = 10):
     return [{"id": r.get("id"), "url": r.get("url"), "status": r.get("status")} for r in rows]
 
 
-def get_recent_events_service(db: Session, limit: int = 20):
-    # produce a lightweight 'events' feed from recent URLs
+def get_recent_events_service(db: Session, limit: int = 10):
+    # produce a lightweight 'events' feed from recent URLs (default limit 10)
     recent = get_recent_urls(db, limit=limit)
     events = []
     for r in recent:

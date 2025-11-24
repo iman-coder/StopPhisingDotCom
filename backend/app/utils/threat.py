@@ -37,4 +37,4 @@ def normalize_threat(threat: Optional[str]) -> str:
     if any(k in t for k in ("ok", "safe", "legit", "benign", "clean")):
         return "safe"
 
-    return "unknown"
+    return "suspicious"  # default to suspicious if unclear
