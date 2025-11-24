@@ -5,8 +5,11 @@
       <input v-model="url.url" class="form-control" placeholder="Enter URL..." />
       <input v-model="url.domain" class="form-control" placeholder="Enter Domain..." />
       <input v-model="url.threat" class="form-control" placeholder="Threat Category..." />
-      <input v-model="url.date" type="date" class="form-control" placeholder="Date Added..." />
-      <input v-model="url.status" class="form-control" placeholder="Status..." />
+      <select v-model="url.status" class="form-control">
+        <option value="" disabled>Select status...</option>
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
       <input v-model="url.source" class="form-control" placeholder="Source..." />
       <div class="button-wrapper">
         <button class="btn btn-primary" type="submit">Add URL</button>
@@ -26,14 +29,13 @@ export default {
       url: "",
       domain: "",
       threat: "",
-      date: "",
       status: "",
       source: ""
     });
 
     async function submitForm() {
       await addUrl(url.value);
-      url.value = { url: "", domain: "", threat: "", date: "", status: "", source: "" };
+      url.value = { url: "", domain: "", threat: "", status: "", source: "" };
       emit("url-added"); // trigger table refresh
     }
 

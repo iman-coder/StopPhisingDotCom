@@ -38,10 +38,12 @@ export default {
 
       try {
         const result = await importCSV(this.csvFile);
-        this.message = result.message || "Import successful!";
+        // server is expected to return a JSON { message: '...' } or similar
+        this.message = (result && result.message) || "Import successful!";
         this.$emit("refresh");
       } catch (err) {
-        this.message = "Import failed.";
+        console.error("CSV import failed:", err);
+        this.message = "Import failed. Check console for details.";
       }
     }
   }

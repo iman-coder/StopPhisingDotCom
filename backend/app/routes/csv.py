@@ -3,7 +3,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.utils.database import SessionLocal
 from app.services.csv_service import export_csv, import_csv
+from app.utils.logger import get_logger
 import io
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/urls", tags=["CSV"])
 
@@ -43,6 +46,11 @@ async def import_csv_route(
         # fallback to latin-1 if utf-8 fails
         content = content_bytes.decode("latin-1")
 
-    result = import_csv(content, db)
-
-    return result
+    logger.info("import_csv_route: filename=%s size=%s bytes", file.filename, len(content_bytes))
+    try:
+        result = import_csv(content, db)
+        logger.info("import_csv_route: result=%s", result)
+        return result
+    except Exception as e:
+        logger.exception("import_csv failed")
+        raise HTTPException(status_code=500, detail=str(e))

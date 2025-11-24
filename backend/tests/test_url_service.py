@@ -49,3 +49,7 @@ def test_create_get_update_delete_url():
 
     finally:
         db.close()
+        
+    """
+    Get-ChildItem -Path . -Include *.db -Recurse -Force | Select-Object Name,FullName,Length,@{Name='LastWrite';Expression={$_.LastWriteTime}} | Sort-Object LastWrite -Descending | Format-Table -AutoSize
+    """

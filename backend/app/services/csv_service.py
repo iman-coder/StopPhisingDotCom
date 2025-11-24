@@ -7,12 +7,24 @@ from fastapi import HTTPException
 
 from app.models import URL
 from app.schemas import URLCreate
+from app.utils.logger import get_logger
+from app.utils.threat import normalize_threat
+
+logger = get_logger(__name__)
 
 
 # -------- CSV IMPORT -------- #
 
 def import_csv(file_content: str, db: Session):
-    reader = csv.DictReader(StringIO(file_content))
+    # Try to detect delimiter (comma/semicolon/tab) to be tolerant of different CSV formats
+    sample = file_content[:4096]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=[',', ';', '\t'])
+        delim = dialect.delimiter
+    except Exception:
+        delim = ','
+
+    reader = csv.DictReader(StringIO(file_content), delimiter=delim)
     created_count = 0
     skipped = []
 
@@ -20,23 +32,38 @@ def import_csv(file_content: str, db: Session):
     existing_urls = set([r[0] for r in db.query(URL.url).all()]) if db.query(URL).count() > 0 else set()
     seen = set()
 
+    # Log the detected header keys (normalized) to aid debugging
+    try:
+        raw_fieldnames = reader.fieldnames or []
+        norm_fieldnames = [fn.strip().lower() if fn else fn for fn in raw_fieldnames]
+        logger.info("import_csv: detected delimiter='%s' headers=%s", delim, raw_fieldnames)
+        logger.debug("import_csv: normalized headers=%s", norm_fieldnames)
+    except Exception:
+        logger.debug("import_csv: could not read headers")
+
     for row in reader:
-        url_value = row.get("url")
+        # Normalize row keys (case-insensitive, trim) and values
+        norm_row = { (k.strip().lower() if k else k): (v.strip() if isinstance(v, str) else v) for k, v in (row.items() if row else []) }
+        # Accept 'url' column in any case / with spaces
+        url_value = norm_row.get("url") or norm_row.get("link") or norm_row.get("uri")
         if not url_value:
-            skipped.append(row)
+            skipped.append(norm_row)
             continue
 
         # Avoid duplicate URLs (both in DB and already seen in this import)
         if url_value in existing_urls or url_value in seen:
-            skipped.append(row)
+            skipped.append(norm_row)
             continue
 
+        # normalize threat text so stored values are canonical
+        raw_threat = norm_row.get("threat")
+        normalized = normalize_threat(raw_threat)
         new_url = URL(
             url=url_value,
-            domain=row.get("domain"),
-            threat=row.get("threat"),
-            status=row.get("status"),
-            source=row.get("source"),
+            domain=norm_row.get("domain") or norm_row.get("host"),
+            threat=normalized,
+            status=norm_row.get("status"),
+            source=norm_row.get("source"),
         )
 
         db.add(new_url)
@@ -44,6 +71,11 @@ def import_csv(file_content: str, db: Session):
         seen.add(url_value)
 
     db.commit()
+
+    logger.info("import_csv: inserted=%s skipped=%s", created_count, len(skipped))
+    if skipped:
+        # log up to 10 skipped rows for debugging (show normalized rows)
+        logger.debug("import_csv skipped rows sample: %s", skipped[:10])
 
     return {
         "inserted": created_count,

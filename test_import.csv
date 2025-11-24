@@ -1,0 +1,16 @@
+URL,Domain,Threat,Date Added,Status,Source,Actions
+http://bad-example-download[.]com/secure/update.exe,bad-example-download[.]com,malware,2025-01-10,active,synthetic_feed,N/A
+http://malicious-fileserver[.]net/payload/dropper.bin,malicious-fileserver[.]net,trojan,2025-01-12,active,synthetic_feed,N/A
+hxxp://phishy-login[.]org/account/verify/index.php,phishy-login[.]org,phishing,2025-01-15,active,synthetic_feed,N/A
+http://unknown-ip[.]123.45.67.89/shell/command.sh,123.45.67.89,malware,2025-01-16,active,synthetic_feed,N/A
+hxxps://fake-antivirus-update[.]com/update/v2/install.pkg,fake-antivirus-update[.]com,rogueware,2025-01-17,active,synthetic_feed,N/A
+http://suspicious-cdn[.]info/js/loader.js,suspicious-cdn[.]info,malicious_script,2025-01-18,active,synthetic_feed,N/A
+hxxp://compromised-blog[.]site/wp-content/uploads/inject.php,compromised-blog[.]site,webshell,2025-01-19,active,synthetic_feed,N/A
+http://darkcdn-mirror[.]co/downloads/ransomware.tar.gz,darkcdn-mirror[.]co,ransomware,2025-01-20,active,synthetic_feed,N/A
+hxxp://fraud-billing-portal[.]biz/login/auth.php,fraud-billing-portal[.]biz,phishing,2025-01-21,active,synthetic_feed,N/A
+http://malware-distro[.]to/panel/gate.php,malware-distro[.]to,botnet_c2,2025-01-22,active,synthetic_feed,N/A
+hxxps://forged-payment-gateway[.]money/api/v1/pay.php,forged-payment-gateway[.]money,phishing,2025-01-23,active,synthetic_feed,N/A
+http://drive-by-attack-cdn[.]top/assets/jquery.min.js,drive-by-attack-cdn[.]top,malicious_script,2025-01-24,active,synthetic_feed,N/A
+hxxp://fake-crypto-airdrop[.]ai/claim/walletconnect.php,fake-crypto-airdrop[.]ai,phishing,2025-01-25,active,synthetic_feed,N/A
+http://rogue-ext-mirror[.]app/extension/update.crx,rogue-ext-mirror[.]app,malicious_extension,2025-01-26,active,synthetic_feed,N/A
+hxxp://stealer-mirror[.]fun/downloads/passwords_stealer.zip,stealer-mirror[.]fun,credential_stealer,2025-01-27,active,synthetic_feed,N/A

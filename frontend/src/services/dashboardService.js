@@ -1,7 +1,8 @@
 // dashboardService.js
 import axios from "axios";
 
-const API = "http://localhost:8000/dashboard";
+// Use relative path so dev server can proxy API calls to backend
+const API = "/dashboard";
 const USE_MOCKS = false; // ⬅ Switch to false to use real backend
 
 /* -------------------------------------------------------

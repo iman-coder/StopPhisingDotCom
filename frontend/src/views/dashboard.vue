@@ -45,7 +45,38 @@ const searchResults = ref([]);
  * ----------------------------------------------------- */
 async function loadDashboard() {
     globalMetrics.value = await getGlobalMetrics();
-    riskDistribution.value = await getRiskDistribution();
+    // Normalize risk distribution into canonical buckets so the PieChart always receives
+    // { safe: number, suspicious: number, malicious: number }
+    try {
+      const rawRisk = await getRiskDistribution();
+      console.debug("raw risk distribution:", rawRisk);
+      const normalized = { safe: 0, suspicious: 0, malicious: 0 };
+
+      if (Array.isArray(rawRisk)) {
+        // handle [{ threat: 'malicious', count: 10 }, ...]
+        rawRisk.forEach(r => {
+          const key = (r.threat || r.label || '').toString().toLowerCase();
+          const count = Number(r.count ?? r.value ?? 0);
+          if (/malicious|high|malware|phish/.test(key)) normalized.malicious += count;
+          else if (/susp|low/.test(key)) normalized.suspicious += count;
+          else if (/safe|none|clean/.test(key)) normalized.safe += count;
+        });
+      } else if (rawRisk && typeof rawRisk === 'object') {
+        // handle { safe: n, suspicious: m, malicious: k } or other mappings
+        Object.entries(rawRisk).forEach(([k, v]) => {
+          const key = k.toString().toLowerCase();
+          const count = Number(v || 0);
+          if (/malicious|high|malware|phish/.test(key)) normalized.malicious += count;
+          else if (/susp|low/.test(key)) normalized.suspicious += count;
+          else if (/safe|none|clean/.test(key)) normalized.safe += count;
+        });
+      }
+
+      riskDistribution.value = normalized;
+    } catch (e) {
+      console.error('Failed to load risk distribution', e);
+      riskDistribution.value = {};
+    }
     statusDistribution.value = await getStatusDistribution();
 
     domainCounts.value = await getDomainCounts();
@@ -132,17 +163,21 @@ onMounted(() => loadDashboard());
   <div class="chart-row">
     <div class="chart-card">
       <h3>Risk Distribution</h3>
-      <PieChart
-        :labels="Object.keys(riskDistribution)"
-        :values="Object.values(riskDistribution)"
-      />
+      <div class="chart-wrapper">
+        <PieChart
+          :labels="Object.keys(riskDistribution)"
+          :values="Object.values(riskDistribution)"
+        />
+      </div>
     </div>
     <div class="chart-card">
       <h3>Status Distribution</h3>
-      <PieChart
-        :labels="Object.keys(statusDistribution)"
-        :values="Object.values(statusDistribution)"
-      />
+      <div class="chart-wrapper">
+        <PieChart
+          :labels="Object.keys(statusDistribution)"
+          :values="Object.values(statusDistribution)"
+        />
+      </div>
     </div>
   </div>
 </section>
@@ -152,10 +187,12 @@ onMounted(() => loadDashboard());
   <div class="chart-row">
     <div class="chart-card">
       <h3>Domain Counts</h3>
-      <PieChart
-        :labels="Object.keys(domainCounts)"
-        :values="Object.values(domainCounts)"
-      />
+      <div class="chart-wrapper">
+        <PieChart
+          :labels="Object.keys(domainCounts)"
+          :values="Object.values(domainCounts)"
+        />
+      </div>
     </div>
     <div class="chart-card">
       <h3>Top Risky Domains</h3>
@@ -182,17 +219,21 @@ onMounted(() => loadDashboard());
   <div class="chart-row">
     <div class="chart-card">
       <h3>Monthly Activity</h3>
-      <LineChart
-        :labels="monthlyActivity.map(a => a.month)"
-        :values="monthlyActivity.map(a => a.scanned)"
-      />
+      <div class="chart-wrapper">
+        <LineChart
+          :labels="monthlyActivity.map(a => a.month)"
+          :values="monthlyActivity.map(a => a.scanned)"
+        />
+      </div>
     </div>
     <div class="chart-card">
       <h3>Daily Activity</h3>
-      <LineChart
-        :labels="dailyActivity.map(a => a.day)"
-        :values="dailyActivity.map(a => a.scanned)"
-      />
+      <div class="chart-wrapper">
+        <LineChart
+          :labels="dailyActivity.map(a => a.day)"
+          :values="dailyActivity.map(a => a.scanned)"
+        />
+      </div>
     </div>
   </div>
 </section>
@@ -298,6 +339,71 @@ onMounted(() => loadDashboard());
   background: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
+}
+
+/* Ensure chart cards align and have equal height */
+.chart-row {
+  align-items: stretch;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  /* let the card size itself but provide a reasonable default */
+  min-height: 260px;
+  max-height: 480px;
+  overflow: hidden;
+}
+
+/* Chart wrapper ensures a fixed container for the chart component */
+.chart-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* set a reasonable height that can shrink on small screens */
+  min-height: 180px;
+}
+
+/* Make chart components fill their wrapper; allow chart libraries to manage aspect */
+.chart-wrapper > * {
+  width: 100%;
+  height: 100%;
+}
+
+/* Chart wrapper: constrain visuals without forcing canvas distortion */
+.chart-card canvas,
+.chart-card svg {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 360px; /* prevents charts from overflowing on large screens */
+}
+
+/* Smaller devices: stack cards vertically and reduce chart sizes */
+@media (max-width: 992px) {
+  .chart-card {
+    min-height: 220px;
+    max-height: 420px;
+  }
+  .chart-card canvas,
+  .chart-card svg {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 600px) {
+  .chart-row {
+    flex-direction: column;
+  }
+  .chart-card {
+    min-height: 180px;
+    max-height: none;
+  }
+  .chart-card canvas,
+  .chart-card svg {
+    max-height: 220px;
+  }
 }
 
 .metrics-grid {

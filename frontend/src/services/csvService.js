@@ -1,7 +1,8 @@
 // src/services/csvService.js
 import axios from "axios";
 
-const API = "http://localhost:8000/urls";
+// Use relative API path so Vite dev server can proxy requests in development
+const API = "/urls";
 
 export async function exportCSV() {
     const response = await axios.get(`${API}/export`, {
@@ -14,7 +15,8 @@ export async function importCSV(file) {
     const formData = new FormData();
     formData.append("file", file);
 
-    return axios.post(`${API}/import`, formData, {
+    const response = await axios.post(`${API}/import`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
     });
+    return response.data;
 }
