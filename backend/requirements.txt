@@ -8,3 +8,4 @@ alembic
 pytest
 python-multipart
 python-json-logger
+redis

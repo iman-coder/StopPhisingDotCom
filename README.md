@@ -56,109 +56,149 @@ Key backend files:
 Key frontend files:
 - `frontend/src/services/*` — API client modules (`urlService.js`, `dashboardService.js`)
 - `frontend/src/components/*` — UI components (forms, tables, charts)
-- `frontend/src/views/*` — top-level views (Dashboard, URLs)
+
+# StopPhishingDotCom — URL Dashboard & Manager
+
+Lightweight web app for importing, classifying and monitoring URLs. The project contains a FastAPI backend and a Vue 3 frontend (Vite) that provides dashboards and URL CRUD operations.
+
+This README shows how to run the app locally (PowerShell examples), how to use Docker Compose for a reproducible dev environment, and common troubleshooting tips.
 
 ---
 
-## Environment & configuration
+**Quick Start (Docker Compose)**
 
-- Backend reads `DATABASE_URL` from environment (defaults to a local SQLite file if unspecified).
-- Common env vars (create a `.env` file in `backend/`):
-
-```
-DATABASE_URL=sqlite:///./urls.db
-LOG_FILE=./logs/app.log
-SECRET_KEY=changeme
-```
-
-Load `.env` via your shell or use tools (for development with `uvicorn --reload` the project may load `.env` automatically if configured).
-
----
-
-## Useful commands
-
-Backend (from `backend/`):
+- Create a local `.env` from the provided example and set strong credentials (do not commit `.env`):
 
 ```powershell
-# install deps
-pip install -r requirements.txt
-
-# run unit tests
-pytest -q
-
-# run server
-uvicorn app.main:app --reload
-
-# quick API checks
-curl http://127.0.0.1:8000/dashboard/metrics
-curl http://127.0.0.1:8000/urls | Out-String -Width 4096
+Copy-Item .\.env.example .\.env
+notepad .\.env
 ```
 
-Frontend (from `frontend/` or `phishing-frontend/`):
+- Start the stack (backend, frontend, redis, Postgres):
 
 ```powershell
-npm install
-npm run dev
-npm run build    # production build
+# from repository root
+docker-compose up -d --build
 ```
 
-Notes:
-- The frontend uses relative API paths so Vite can proxy requests to the backend during development. If you change the backend host/port, update Vite proxy in `vite.config.js` or set the API base in `frontend/src/services/*.js`.
+- Watch backend logs while it starts (helpful for DB/migration messages):
+
+```powershell
+docker-compose logs -f backend
+```
+
+Open the frontend at `http://localhost:5173` and the API docs at `http://127.0.0.1:8000/docs`.
 
 ---
 
-## API highlights
+**Development (Backend)**
 
-- `GET /dashboard/metrics` — summary counts (`total_urls`, `safe`, `suspicious`, `malicious`).
-- `GET /dashboard/risk-distribution` — mapping for charting risk buckets.
-- `GET /dashboard/domains?limit=10` — domain counts (top N domains).
-- `GET /urls` — list URLs
-- `POST /urls/import` — multipart upload CSV to import URLs (key columns: `url`, optional `domain`, `threat`, `status`, `source`).
-
-Open `http://127.0.0.1:8000/docs` for the full OpenAPI listing and interactive testing.
-
----
-
-## Troubleshooting notes
-
-- Counts not matching in the dashboard?
-  - The backend normalizes freeform `threat` strings (using `backend/app/utils/threat.py`). If many rows have empty or unknown threat labels they may be bucketed as `unknown` (or `suspicious` depending on configuration). Check raw rows:
-
-    ```powershell
-    curl http://127.0.0.1:8000/urls | Out-String -Width 4096
-    ```
-
-  - Also check `GET /dashboard/risk-distribution` to see the normalized breakdown the frontend uses.
-
-- CSV import not adding rows?
-  - Server logs show `POST /urls/import` processing and summary. Check `backend/app/services/csv_service.py` for header/delimiter heuristics.
-
-- Frontend shows only one row while backend `curl` shows many?
-  - Ensure the frontend dev server is proxying `/urls` to `127.0.0.1:8000`. Check `vite.config.js` and verify the frontend `urlService` uses a relative path (e.g. `const API = "/urls/"`).
-
----
-
-## Developer notes
-
-- To change how threat strings are normalized, edit `backend/app/utils/threat.py` (used by create/update/import and dashboard aggregation).
-- To adjust how many domains appear in the domain chart, call `GET /dashboard/domains?limit=10` (backend default is 10).
-- To run a local migration (if using alembic):
+- Create and activate a venv, install dependencies, run the server locally:
 
 ```powershell
 cd backend
-alembic upgrade head
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+- Run tests:
+
+```powershell
+cd backend
+pytest -q
+```
+
+Notes:
+- The backend reads `DATABASE_URL` from the environment. When using Docker Compose, the compose file builds the `DATABASE_URL` from top-level variables in `./.env`.
+- `backend/.env` is kept for local, backend-only overrides (e.g. `SECRET_KEY`, local SQLite path). Avoid duplicating DB credentials across both files.
+
+---
+
+**Development (Frontend)**
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend uses relative API paths so Vite can proxy to the backend during development. If you change the backend host/port, update the Vite proxy in `vite.config.js` or the base URL in `frontend/src/services/*.js`.
+
+---
+
+**Database & Migrations**
+
+- With Compose you normally do NOT need Postgres exposed on the host. If you need host access, use a different host port (e.g. `5433:5432`) in `docker-compose.yml`.
+- Apply migrations after the DB is ready:
+
+```powershell
+# run migrations from the host using the backend container
+docker-compose exec backend sh -c "alembic upgrade head"
+```
+
+Or run `alembic` locally against your `DATABASE_URL`.
+
+Important: Compose's `depends_on` ensures the DB container starts, but does not wait for readiness. If your backend fails on startup due to DB not accepting connections, add a small wait-for script or use a healthcheck for Postgres.
+
+---
+
+**Environment files and secrets**
+
+- Use the top-level `./.env` for service-level variables (Postgres, Redis). Keep `backend/.env` for backend-only local overrides.
+- `./.env.example` contains placeholders — copy it to `./.env` and fill with secure values. `./.env` is ignored by Git by default.
+
+Example (local `./.env`):
+
+```env
+POSTGRES_USER=stopphish
+POSTGRES_PASSWORD=ReplaceThisWithAStrongPassword
+POSTGRES_DB=stopphishing
+POSTGRES_PORT=5432
+REDIS_URL=redis://redis:6379/0
 ```
 
 ---
 
-If you'd like, I can add a one-shot script to reclassify existing unknown threats (example: mark empty -> `suspicious`) or add a debug route that shows raw grouped threat values.
+**API Highlights**
 
-License & credits
-- MIT-style permissive license (add LICENSE file if desired).
+- `GET /dashboard/metrics` — high-level counts: `total_urls`, `safe`, `suspicious`, `malicious`.
+- `GET /dashboard/risk-distribution` — normalized breakdown for charts.
+- `GET /dashboard/domains?limit=10` — top domain counts.
+- `GET /urls` — list URLs.
+- `POST /urls/import` — CSV import (`url`, optional `domain`, `threat`, `status`, `source`).
+
+Use `http://127.0.0.1:8000/docs` for the full OpenAPI schema and interactive testing.
 
 ---
 
-Happy hacking — if something is unclear I can add exact `vite.config.js` proxy examples, a sample `.env` loader, or a small script to seed the DB with example URLs.
-# Check current database version
+**Troubleshooting**
 
-alembic current
+- Port 5432 already in use:
+  - Option 1 (recommended): remove the `ports:` mapping for the `db` service in `docker-compose.yml` so Postgres is accessible only to containers.
+  - Option 2: change host mapping to `5433:5432` in `docker-compose.yml`.
+
+- Backend returns HTTP 500 on endpoints:
+  - Check backend logs: `docker-compose logs --tail=200 backend` and `docker-compose logs -f backend` while re-triggering the request.
+  - Inspect `GET /urls/debug` (if present) to see the `DATABASE_URL` used by the running container.
+
+- Dashboard counts incorrect:
+  - Threats are normalized at import and aggregation; inspect `GET /dashboard/risk-distribution` for the normalized buckets.
+
+---
+
+**Contributing & Next Steps**
+
+- To add DB health checks or a wait-for script I can update `docker-compose.yml` and the backend entrypoint so the app only starts after the DB accepts connections.
+- To avoid secrets in repos for production, use Docker secrets or your platform's secret store.
+
+If you want, I can now:
+- create a local `./.env` from `.env.example` and bring the stack up, run migrations and test the dashboard endpoint, or
+- add a `wait-for-db` script and a Postgres healthcheck to `docker-compose.yml`.
+
+---
+
+License: MIT-style (add `LICENSE` file to publish a formal license).
+
+Happy hacking! If you'd like changes to the README wording or more examples (like `vite.config.js` proxy), tell me which section to expand.

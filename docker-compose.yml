@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7
+    container_name: stopphishing_redis
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: stopphishing_backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # ensure backend talks to our redis service by default
+      - REDIS_URL=redis://redis:6379/0
+      # Use Postgres credentials from environment to avoid plaintext in this file.
+      # Create a top-level `.env` (not committed) or set these variables in your shell.
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: stopphishing_frontend
+    ports:
+      - "5173:80" # host:container -> map host 5173 to nginx 80
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    container_name: stopphishing_db
+    restart: unless-stopped
+    environment:
+      # Values are read from the compose environment (or the `.env` file)
+      POSTGRES_USER: ${POSTGRES_USER:-stopphish}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stopphish_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-stopphishing}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+# Networks: default bridge
+
+volumes:
+  db_data:

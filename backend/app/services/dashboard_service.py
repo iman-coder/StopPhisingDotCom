@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from app.models import URL
 from app.utils.logger import get_logger
 from app.utils.threat import normalize_threat
+from app.utils.cache import cache_get, cache_set
 
 logger = get_logger(__name__)
 
@@ -168,6 +169,12 @@ def get_time_series_by_month_breakdown(db: Session, months: int = 12) -> List[Di
 
 def get_global_metrics_service(db: Session) -> Dict[str, Any]:
     """Return a small summary for the dashboard metrics endpoint."""
+    # attempt to use cached value
+    cache_key = "dashboard:global_metrics"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        logger.debug("global metrics served from cache")
+        return cached
     total = get_total_urls(db)
     by_threat_list = get_counts_by_threat(db)
     # iterate the threat counts and normalize each threat label before bucketing
@@ -189,12 +196,20 @@ def get_global_metrics_service(db: Session) -> Dict[str, Any]:
             # Unknown/other threats are not assigned to these buckets; leave them out
             pass
 
-    return {
+    out = {
         "total_urls": total,
+        # backward compatibility: some callers expect `total`
+        "total": total,
         "safe": safe,
         "suspicious": suspicious,
         "malicious": malicious,
     }
+    # cache result for short time to reduce DB load
+    try:
+        cache_set(cache_key, out, ttl=30)
+    except Exception:
+        pass
+    return out
 
 
 def get_risk_distribution_service(db: Session) -> List[Dict[str, Any]]:
@@ -204,6 +219,13 @@ def get_risk_distribution_service(db: Session) -> List[Dict[str, Any]]:
     safe = 0
     suspicious = 0
     malicious = 0
+    # try cache
+    cache_key = "dashboard:risk_distribution"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        logger.debug("risk distribution served from cache")
+        return cached
+
     for r in rows:
         raw = r.get("threat")
         cnt = int(r.get("count", 0) or 0)
@@ -215,7 +237,12 @@ def get_risk_distribution_service(db: Session) -> List[Dict[str, Any]]:
         elif norm == "malicious":
             malicious += cnt
 
-    return {"safe": safe, "suspicious": suspicious, "malicious": malicious}
+    result = {"safe": safe, "suspicious": suspicious, "malicious": malicious}
+    try:
+        cache_set(cache_key, result, ttl=30)
+    except Exception:
+        pass
+    return result
 
 
 def get_status_distribution_service(db: Session) -> List[Dict[str, Any]]:
@@ -225,9 +252,20 @@ def get_status_distribution_service(db: Session) -> List[Dict[str, Any]]:
 
 def get_domain_counts_service(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
     # Return only the top `limit` domains to keep the chart focused.
+    cache_key = f"dashboard:domains:top:{limit}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        logger.debug("domain counts served from cache")
+        return cached
+
     rows = get_top_domains(db, limit=limit)
     # convert list of {domain,count} to mapping {domain: count}
-    return {r["domain"]: r["count"] for r in rows}
+    result = {r["domain"]: r["count"] for r in rows}
+    try:
+        cache_set(cache_key, result, ttl=60)
+    except Exception:
+        pass
+    return result
 
 
 def get_top_risky_domains_service(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
@@ -244,20 +282,41 @@ def get_daily_activity_service(db: Session):
 
 def get_top_risky_urls_service(db: Session, limit: int = 10):
     # reuse recent_urls for now (could be sorted by threat/severity)
+    cache_key = f"dashboard:top_risky_urls:{limit}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        logger.debug("top risky urls served from cache")
+        return cached
+
     rows = get_recent_urls(db, limit=limit)
     # map threat -> risk for frontend
     out = []
     for r in rows:
         risk = normalize_threat(r.get("threat"))
         out.append({"id": r.get("id"), "url": r.get("url"), "risk": risk})
+    try:
+        cache_set(cache_key, out, ttl=30)
+    except Exception:
+        pass
     return out
 
 
 def get_recent_urls_service(db: Session, limit: int = 10):
     # frontend expects 'status' field; recent_urls already includes it
+    cache_key = f"dashboard:recent_urls:{limit}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        logger.debug("recent urls served from cache")
+        return cached
+
     rows = get_recent_urls(db, limit=limit)
     # keep only the fields frontend uses: id, url, status
-    return [{"id": r.get("id"), "url": r.get("url"), "status": r.get("status")} for r in rows]
+    result = [{"id": r.get("id"), "url": r.get("url"), "status": r.get("status")} for r in rows]
+    try:
+        cache_set(cache_key, result, ttl=30)
+    except Exception:
+        pass
+    return result
 
 
 def get_recent_events_service(db: Session, limit: int = 10):
