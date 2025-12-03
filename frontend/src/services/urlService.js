@@ -9,7 +9,9 @@ attachAuthHeader();
 const API = "/urls/";
 
 export async function getUrls() {
-    const response = await axios.get(API);
+    // Accept parameters object: { query, page, per_page }
+    // If called with no args, simply fetch default list (server returns paginated response)
+    const response = await axios.get(API, { params: arguments[0] || {} });
     return response.data;
 }
 

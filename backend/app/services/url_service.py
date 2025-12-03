@@ -3,10 +3,53 @@ from app.models import URL
 from app.schemas import URLCreate, URLUpdate
 from fastapi import HTTPException
 from app.utils.threat import normalize_threat
+from app.utils import cache
+from sqlalchemy import or_, func, cast
+from sqlalchemy.types import String
 
 
 def get_all_urls(db: Session):
-    return db.query(URL).all()
+    # Return rows ordered by `date_added` descending so newest items appear first.
+    # When `date_added` is NULL, SQLAlchemy will place them last by default.
+    return db.query(URL).order_by(URL.date_added.desc()).all()
+
+
+def search_urls(db: Session, q: str | None = None, page: int = 1, per_page: int = 25, use_cache: bool = True):
+    """Search URLs with pagination. Returns dict {items, total, page, per_page}.
+
+    Uses a simple LIKE-based search across several fields. Caches results in Redis
+    when `use_cache` is True and `q` is non-empty.
+    """
+    key = None
+    if use_cache and q:
+        key = f"search:{q}:{page}:{per_page}"
+        cached = cache.cache_get(key)
+        if cached is not None:
+            return cached
+
+    query = db.query(URL)
+    if q:
+        term = f"%{q.lower()}%"
+        # case-insensitive matches across text fields and id
+        query = query.filter(
+            or_(
+                func.lower(URL.url).like(term),
+                func.lower(URL.domain).like(term),
+                func.lower(URL.threat).like(term),
+                func.lower(URL.status).like(term),
+                func.lower(URL.source).like(term),
+                cast(URL.id, String).like(term),
+            )
+        )
+
+    total = query.count()
+    items = query.order_by(URL.date_added.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+    result = {"items": items, "total": total, "page": page, "per_page": per_page}
+    if key:
+        # cache short-lived for responsiveness; failures are ignored inside cache module
+        cache.cache_set(key, result, ttl=30)
+    return result
 
 
 def create_url(db: Session, url_data: URLCreate):

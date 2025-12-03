@@ -35,6 +35,16 @@ class URLResponse(URLBase):
         orm_mode = True
 
 
+class URLListResponse(BaseModel):
+    items: list[URLResponse]
+    total: int
+    page: int
+    per_page: int
+
+    class Config:
+        orm_mode = True
+
+
 
 class UserCreate(BaseModel):
     username: str

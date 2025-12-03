@@ -7,8 +7,8 @@
       <input v-model="url.threat" class="form-control" placeholder="Threat Category..." />
       <select v-model="url.status" class="form-control">
         <option value="" disabled>Select status...</option>
-        <option value="Active">Active</option>
-        <option value="Inactive">Inactive</option>
+        <option value="Active">active</option>
+        <option value="Inactive">inactive</option>
       </select>
       <input v-model="url.source" class="form-control" placeholder="Source..." />
       <div class="button-wrapper">

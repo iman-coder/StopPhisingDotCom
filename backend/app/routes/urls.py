@@ -4,7 +4,8 @@ from app.utils.database import SessionLocal, DATABASE_URL
 from app.schemas import URLCreate, URLResponse, URLUpdate
 from app.services import url_service
 from app.utils.logger import get_logger
-from app.utils.auth import get_current_admin_user
+from app.utils.auth import get_current_admin_user, get_current_user
+from app.schemas import URLListResponse
 
 logger = get_logger(__name__)
 
@@ -22,23 +23,27 @@ def health():
     return {"status": "ok"}
 
 
-@router.get("/", response_model=list[URLResponse])
-def get_all_urls(db: Session = Depends(get_db)):
-    return url_service.get_all_urls(db)
+@router.get("/", response_model=URLListResponse)
+def get_all_urls(query: str | None = None, page: int = 1, per_page: int = 25, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Return paginated URLs. Requires authenticated user."""
+    return url_service.search_urls(db, q=query, page=page, per_page=per_page)
 
 
 @router.get("/count")
-def get_count(db: Session = Depends(get_db)):
+def get_count(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Return URL count. Requires authenticated user."""
     return {"count": len(url_service.get_all_urls(db))}
 
 
 @router.post("/", response_model=URLResponse)
-def create_url(url: URLCreate, db: Session = Depends(get_db)):
+def create_url(url: URLCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Create a new URL. Requires authenticated user."""
     return url_service.create_url(db, url)
 
 
 @router.put("/{url_id}", response_model=URLResponse)
-def update_url(url_id: int, url: URLUpdate, db: Session = Depends(get_db)):
+def update_url(url_id: int, url: URLUpdate, db: Session = Depends(get_db), current_admin=Depends(get_current_admin_user)):
+    """Update an existing URL. Requires authenticated user."""
     return url_service.update_url(db, url_id, url)
 
 
