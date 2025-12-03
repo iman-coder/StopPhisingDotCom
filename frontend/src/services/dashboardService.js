@@ -1,5 +1,9 @@
 // dashboardService.js
 import axios from "axios";
+import { attachAuthHeader } from "./authService";
+
+// Ensure Authorization header is attached if token present
+attachAuthHeader();
 
 // Use relative path so dev server can proxy API calls to backend
 const API = "/dashboard";

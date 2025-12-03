@@ -54,6 +54,7 @@
 <script>
 import { deleteUrl, updateUrl } from "../services/urlService.js";
 import { ref, reactive } from "vue";
+import { isAdmin } from "../services/authService.js";
 
 export default {
   name: "UrlTable",
@@ -94,6 +95,10 @@ export default {
     }
 
     async function deleteUrlItem(id) {
+      if (!isAdmin()) {
+        alert('Only admin users can delete URLs.');
+        return;
+      }
       await deleteUrl(id);
       emit("deleted");
     }

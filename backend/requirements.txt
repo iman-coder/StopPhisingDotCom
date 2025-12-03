@@ -9,3 +9,6 @@ pytest
 python-multipart
 python-json-logger
 redis
+passlib[bcrypt]
+python-jose[cryptography]
+httpx

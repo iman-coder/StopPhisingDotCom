@@ -1,5 +1,9 @@
 // src/services/urlService.js
 import axios from "axios";
+import { attachAuthHeader } from "./authService";
+
+// Ensure Authorization header is attached if token present
+attachAuthHeader();
 
 // Use relative path with trailing slash to avoid 307 redirects from FastAPI
 const API = "/urls/";

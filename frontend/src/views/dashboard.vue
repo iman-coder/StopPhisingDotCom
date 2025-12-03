@@ -277,7 +277,9 @@ onMounted(() => loadDashboard());
     </div>
   </div>
 </section>
+
 <!-- RECENT EVENTS -->
+ <!--
 <section>
   <h2>Recent Events</h2>
   <table class="table table-striped">
@@ -296,7 +298,7 @@ onMounted(() => loadDashboard());
       </tr>
     </tbody>
   </table>
-</section>
+</section>-->
 
   </div>
 </template>

@@ -1,0 +1,14 @@
+[
+  {
+    "inserted": 10000,
+    "skipped": 0,
+    "duration_seconds": 2.6890165000222623,
+    "status_code": 200
+  },
+  {
+    "inserted": 0,
+    "skipped": 10000,
+    "duration_seconds": 0.31941230001393706,
+    "status_code": 200
+  }
+]

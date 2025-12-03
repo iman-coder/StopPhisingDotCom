@@ -40,6 +40,7 @@ import ExportCsv from "../components/ExportCsv.vue";
 import AddUrlForm from "../components/AddUrlForm.vue";
 import UrlTable from "../components/UrlTable.vue";
 import { getUrls, deleteAll } from "../services/urlService.js";
+import { isAdmin } from "../services/authService.js";
 //test backend connection
 
 const testBackend = async () => {
@@ -68,6 +69,10 @@ export default {
 
     async function confirmDeleteAll() {
       const ok = window.confirm("Delete ALL URLs? This action cannot be undone. Continue?");
+      if (!isAdmin()) {
+        alert('Only admin users can delete all URLs.');
+        return;
+      }
       if (!ok) return;
       try {
         const res = await deleteAll();

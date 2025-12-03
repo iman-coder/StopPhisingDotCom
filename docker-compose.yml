@@ -10,8 +10,9 @@ services:
     build:
       context: ./backend
     container_name: stopphishing_backend
+    # use repository-level .env so docker-compose and services share the same secrets
     env_file:
-      - ./backend/.env
+      - ./.env
     environment:
       # ensure backend talks to our redis service by default
       - REDIS_URL=redis://redis:6379/0
@@ -20,13 +21,21 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
     ports:
       - "8000:8000"
+    # Run uvicorn with proxy headers and an explicit log level
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --log-level info
     depends_on:
       - redis
       - db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/urls/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   frontend:
     build:
+      # workspace frontend folder is `frontend`
       context: ./frontend
     container_name: stopphishing_frontend
     ports:
@@ -49,6 +58,11 @@ services:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stopphish} -d ${POSTGRES_DB:-stopphishing} -h localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 # Networks: default bridge
 

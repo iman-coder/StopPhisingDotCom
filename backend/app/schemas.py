@@ -33,3 +33,33 @@ class URLResponse(URLBase):
 
     class Config:
         orm_mode = True
+
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    is_admin: Optional[bool] = False
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    is_admin: bool
+    created_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None

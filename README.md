@@ -57,6 +57,8 @@ Key frontend files:
 - `frontend/src/services/*` — API client modules (`urlService.js`, `dashboardService.js`)
 - `frontend/src/components/*` — UI components (forms, tables, charts)
 
+Performance testing guide: see `PERFORMANCE.md` for k6 scripts and CSV generation helpers.
+
 # StopPhishingDotCom — URL Dashboard & Manager
 
 Lightweight web app for importing, classifying and monitoring URLs. The project contains a FastAPI backend and a Vue 3 frontend (Vite) that provides dashboards and URL CRUD operations.

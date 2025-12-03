@@ -25,6 +25,19 @@ export default defineConfig({
           }
         }
       },
+      '/auth': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+        bypass: (req, res) => {
+          try {
+            const accept = req.headers && req.headers.accept
+            if (accept && accept.indexOf('text/html') !== -1) return '/index.html'
+          } catch (e) {
+            // ignore
+          }
+        }
+      },
       '/dashboard': {
         target: 'http://localhost:8000',
         changeOrigin: true,

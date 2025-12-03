@@ -4,6 +4,7 @@ from app.utils.database import SessionLocal, DATABASE_URL
 from app.schemas import URLCreate, URLResponse, URLUpdate
 from app.services import url_service
 from app.utils.logger import get_logger
+from app.utils.auth import get_current_admin_user
 
 logger = get_logger(__name__)
 
@@ -22,7 +23,7 @@ def health():
 
 
 @router.get("/", response_model=list[URLResponse])
-def get_urls(db: Session = Depends(get_db)):
+def get_all_urls(db: Session = Depends(get_db)):
     return url_service.get_all_urls(db)
 
 
@@ -42,13 +43,13 @@ def update_url(url_id: int, url: URLUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{url_id}")
-def delete_url(url_id: int, db: Session = Depends(get_db)):
+def delete_url(url_id: int, db: Session = Depends(get_db), current_admin=Depends(get_current_admin_user)):
     return url_service.delete_url(db, url_id)
 
 
 @router.delete("/")
-def delete_all(db: Session = Depends(get_db)):
-    """Delete all URLs. Use with care (no auth on this example).
+def delete_all(db: Session = Depends(get_db), current_admin=Depends(get_current_admin_user)):
+    """Delete all URLs. Protected: admin-only.
 
     Returns: {"deleted": n}
     """
@@ -64,8 +65,7 @@ def delete_all(db: Session = Depends(get_db)):
 
 
 @router.get("/debug")
-def debug_info(db: Session = Depends(get_db)):
-    """Return debug info about which database the running server is using and a small sample of rows."""
+def debug_info(db: Session = Depends(get_db), current_admin=Depends(get_current_admin_user)):
     try:
         rows = url_service.get_all_urls(db)
         count = len(rows)

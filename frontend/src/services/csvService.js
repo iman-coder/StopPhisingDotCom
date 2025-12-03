@@ -1,5 +1,9 @@
 // src/services/csvService.js
 import axios from "axios";
+import { attachAuthHeader } from "./authService";
+
+// Ensure Authorization header is attached if token present
+attachAuthHeader();
 
 // Use relative API path so Vite dev server can proxy requests in development
 const API = "/urls";
