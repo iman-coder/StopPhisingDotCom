@@ -51,6 +51,13 @@ export default defineConfig({
           }
         }
       }
+      ,
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+        // do not bypass API requests for text/html — always forward to backend
+      }
     }
   }
 })

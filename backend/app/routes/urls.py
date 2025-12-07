@@ -6,10 +6,14 @@ from app.services import url_service
 from app.utils.logger import get_logger
 from app.utils.auth import get_current_admin_user, get_current_user
 from app.schemas import URLListResponse
+from app.utils.rate_limit import rate_limit_dep
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/urls", tags=["URLs"])
+
+# Rate limit for search/list: 60 requests per minute per IP/user, burst 10
+search_rate_dep = rate_limit_dep("urls:search", limit_per_minute=60, burst=10)
 
 def get_db():
     db = SessionLocal()
@@ -23,7 +27,7 @@ def health():
     return {"status": "ok"}
 
 
-@router.get("/", response_model=URLListResponse)
+@router.get("/", response_model=URLListResponse, dependencies=[Depends(search_rate_dep)])
 def get_all_urls(query: str | None = None, page: int = 1, per_page: int = 25, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Return paginated URLs. Requires authenticated user."""
     return url_service.search_urls(db, q=query, page=page, per_page=per_page)

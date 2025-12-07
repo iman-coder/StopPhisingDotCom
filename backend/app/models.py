@@ -9,6 +9,8 @@ class URL(Base):
     url = Column(String, unique=True, index=True, nullable=False)
     domain = Column(String, index=True)
     threat = Column(String)
+    # optional numeric representation of risk (0-100). Populated from imports or computed.
+    risk_score = Column(Integer, nullable=True)
     date_added = Column(DateTime, default=datetime.utcnow)
     status = Column(String)
     source = Column(String)

@@ -203,4 +203,4 @@ If you want, I can now:
 
 License: MIT-style (add `LICENSE` file to publish a formal license).
 
-Happy hacking! If you'd like changes to the README wording or more examples (like `vite.config.js` proxy), tell me which section to expand.
+Happy hacking!

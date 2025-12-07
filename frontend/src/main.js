@@ -8,8 +8,11 @@ import { initAuthOnStartup, setupInterceptors } from './services/authService.js'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
-// Initialize auth: attach header, populate current user, and register interceptors
-initAuthOnStartup();
-setupInterceptors();
-
-createApp(App).use(router).mount('#app')
+// Initialize auth before mounting to avoid racing protected requests on
+// first-page load. We await the startup initialization, then register
+// interceptors and mount the app.
+(async () => {
+	await initAuthOnStartup();
+	setupInterceptors();
+	createApp(App).use(router).mount('#app');
+})();

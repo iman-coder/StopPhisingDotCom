@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 from app.models import URL
 from app.utils.logger import get_logger
-from app.utils.threat import normalize_threat
+from app.utils.threat import normalize_threat, risk_score
 from app.utils.cache import cache_get, cache_set
 
 logger = get_logger(__name__)
@@ -50,7 +50,7 @@ def get_top_domains(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
 def get_recent_urls(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
     """Return most recently added URLs with basic fields."""
     rows = (
-        db.query(URL.id, URL.url, URL.domain, URL.threat, URL.date_added, URL.status)
+        db.query(URL.id, URL.url, URL.domain, URL.threat, URL.risk_score, URL.date_added, URL.status)
         .order_by(desc(URL.date_added))
         .limit(limit)
         .all()
@@ -61,8 +61,9 @@ def get_recent_urls(db: Session, limit: int = 10) -> List[Dict[str, Any]]:
             "url": r[1],
             "domain": r[2],
             "threat": r[3],
-            "date_added": r[4].isoformat() if r[4] is not None else None,
-            "status": r[5],
+            "risk_score": r[4],
+            "date_added": r[5].isoformat() if r[5] is not None else None,
+            "status": r[6],
         }
         for r in rows
     ]
@@ -281,19 +282,55 @@ def get_daily_activity_service(db: Session):
 
 
 def get_top_risky_urls_service(db: Session, limit: int = 10):
-    # reuse recent_urls for now (could be sorted by threat/severity)
+    # Return the top URLs ordered by numeric `risk_score` when available.
+    # Falls back to computing a score from textual `threat` when needed.
     cache_key = f"dashboard:top_risky_urls:{limit}"
     cached = cache_get(cache_key)
     if cached is not None:
         logger.debug("top risky urls served from cache")
         return cached
 
-    rows = get_recent_urls(db, limit=limit)
-    # map threat -> risk for frontend
+    # Prefer explicit numeric `risk_score` and order descending. Put NULLs last
+    # and break ties by most recent date_added.
+    rows = (
+        db.query(URL.id, URL.url, URL.domain, URL.threat, URL.risk_score, URL.date_added)
+        .order_by(URL.risk_score.desc().nulls_last(), desc(URL.date_added))
+        .limit(limit)
+        .all()
+    )
+
     out = []
     for r in rows:
-        risk = normalize_threat(r.get("threat"))
-        out.append({"id": r.get("id"), "url": r.get("url"), "risk": risk})
+        raw_threat = r[3]
+        score = r[4]
+        # If numeric score missing, compute from textual threat
+        if score is None:
+            try:
+                score = int(risk_score(raw_threat or ""))
+            except Exception:
+                score = None
+
+        # Map numeric score to human-friendly description
+        desc_text = None
+        if score is not None:
+            if score >= 75:
+                desc_text = "Very High"
+            elif score >= 60:
+                desc_text = "High"
+            elif score >= 40:
+                desc_text = "Medium"
+            elif score >= 20:
+                desc_text = "Low"
+            else:
+                desc_text = "Very Low"
+
+        out.append({
+            "id": r[0],
+            "url": r[1],
+            "risk_score": score,
+            "risk_description": desc_text,
+        })
+
     try:
         cache_set(cache_key, out, ttl=30)
     except Exception:

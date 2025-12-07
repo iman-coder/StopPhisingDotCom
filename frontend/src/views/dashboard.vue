@@ -17,7 +17,6 @@ import {
     getTopRiskyUrls,
     getMostRecentUrls,
     getRecentEvents,
-    searchDashboard
 } from "../services/dashboardService.js";
 
 /* -------------------------------------------------------
@@ -37,14 +36,19 @@ const mostRecentUrls = ref([]);
 
 const recentEvents = ref([]);
 
-const searchQuery = ref("");
-const searchResults = ref([]);
+// helpers
+function safeArray(x) { return Array.isArray(x) ? x : []; }
+function safeObject(x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; }
+function safeNumber(x) { const n = Number(x); return Number.isFinite(n) ? n : 0; }
+function formatNumber(x) { try { return safeNumber(x).toLocaleString(); } catch (e) { return String(safeNumber(x)); } }
+
+// search removed from dashboard (handled elsewhere)
 
 /* -------------------------------------------------------
  * FETCH DASHBOARD DATA
  * ----------------------------------------------------- */
 async function loadDashboard() {
-    globalMetrics.value = await getGlobalMetrics();
+    globalMetrics.value = safeObject(await getGlobalMetrics());
     // Normalize risk distribution into canonical buckets so the PieChart always receives
     // { safe: number, suspicious: number, malicious: number }
     try {
@@ -77,26 +81,19 @@ async function loadDashboard() {
       console.error('Failed to load risk distribution', e);
       riskDistribution.value = {};
     }
-    statusDistribution.value = await getStatusDistribution();
+    statusDistribution.value = safeObject(await getStatusDistribution());
 
-    domainCounts.value = await getDomainCounts();
-    topRiskyDomains.value = await getTopRiskyDomains();
+    domainCounts.value = safeObject(await getDomainCounts());
+    topRiskyDomains.value = safeArray(await getTopRiskyDomains()).slice(0, 10);
 
-    monthlyActivity.value = await getMonthlyActivity();
-    dailyActivity.value = await getDailyActivity();
+    monthlyActivity.value = safeArray(await getMonthlyActivity());
+    dailyActivity.value = safeArray(await getDailyActivity());
 
-    topRiskyUrls.value = await getTopRiskyUrls();
-    mostRecentUrls.value = await getMostRecentUrls();
+    // enforce client-side limits and safe shapes
+    topRiskyUrls.value = safeArray(await getTopRiskyUrls()).slice(0, 10);
+    mostRecentUrls.value = safeArray(await getMostRecentUrls()).slice(0, 10);
 
-    recentEvents.value = await getRecentEvents();
-}
-
-/* -------------------------------------------------------
- * SEARCH LOGIC
- * ----------------------------------------------------- */
-async function handleSearch() {
-    if (searchQuery.value.trim().length < 2) return;
-    searchResults.value = await searchDashboard(searchQuery.value);
+    recentEvents.value = safeArray(await getRecentEvents());
 }
 
 onMounted(() => loadDashboard());
@@ -105,35 +102,7 @@ onMounted(() => loadDashboard());
 <template>
   <div class="dashboard-container">
 
-    <!-- SEARCH BAR -->
-    <div class="search-bar mb-4">
-      <input
-        type="text"
-        v-model="searchQuery"
-        @input="handleSearch"
-        placeholder="Search URLs, domains…"
-        class="form-control"
-      >
-    </div>
-
-    <!-- SEARCH RESULTS -->
-<div v-if="searchResults.length" class="search-results mb-4">
-  <h3>Search Results</h3>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>URL</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="item in searchResults" :key="item.id">
-        <td>{{ item.url }}</td>
-        <td>{{ item.status }}</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+    <!-- Search removed from dashboard -->
 
     <!-- GLOBAL METRICS -->
 <section class="metrics-section mb-4">
@@ -253,7 +222,11 @@ onMounted(() => loadDashboard());
         <tbody>
           <tr v-for="url in topRiskyUrls" :key="url.id">
             <td>{{ url.url }}</td>
-            <td>{{ url.risk }}</td>
+            <td>
+              <span v-if="url.risk_score !== undefined && url.risk_description">{{ url.risk_score }} — {{ url.risk_description }}</span>
+              <span v-else-if="url.risk_score !== undefined">{{ url.risk_score }}</span>
+              <span v-else>—</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -277,28 +250,6 @@ onMounted(() => loadDashboard());
     </div>
   </div>
 </section>
-
-<!-- RECENT EVENTS -->
- <!--
-<section>
-  <h2>Recent Events</h2>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Timestamp</th>
-        <th>Action</th>
-        <th>URL</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="event in recentEvents" :key="event.id">
-        <td>{{ event.timestamp }}</td>
-        <td>{{ event.action }}</td>
-        <td>{{ event.url }}</td>
-      </tr>
-    </tbody>
-  </table>
-</section>-->
 
   </div>
 </template>

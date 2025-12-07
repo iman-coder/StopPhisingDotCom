@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from app.models import URL
 from app.schemas import URLCreate
 from app.utils.logger import get_logger
-from app.utils.threat import normalize_threat
+from app.utils.threat import normalize_threat, risk_score
 
 logger = get_logger(__name__)
 
@@ -41,6 +41,36 @@ def import_csv(file_content: str, db: Session):
     except Exception:
         logger.debug("import_csv: could not read headers")
 
+    def _parse_risk_field(val):
+        """Parse a CSV risk/threat field which may be textual ('high','malicious')
+        or numeric ('90', '55') and return a canonical threat label.
+
+        Numeric thresholds (coarse):
+          >= 75 -> 'malicious'
+          40-74 -> 'suspicious'
+          < 40  -> 'safe'
+        """
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            score = int(val)
+            if score >= 75:
+                return "malicious"
+            if score >= 40:
+                return "suspicious"
+            return "safe"
+        # string value: try numeric parse first
+        s = str(val).strip()
+        if s == "":
+            return None
+        # Try parse as integer/float
+        try:
+            n = float(s)
+            return _parse_risk_field(int(n))
+        except Exception:
+            # fallback: treat as textual threat and normalize
+            return normalize_threat(s)
+
     for row in reader:
         # Normalize row keys (case-insensitive, trim) and values
         norm_row = { (k.strip().lower() if k else k): (v.strip() if isinstance(v, str) else v) for k, v in (row.items() if row else []) }
@@ -56,12 +86,31 @@ def import_csv(file_content: str, db: Session):
             continue
 
         # normalize threat text so stored values are canonical
-        raw_threat = norm_row.get("threat")
-        normalized = normalize_threat(raw_threat)
+        # Accept multiple column names that might provide risk info
+        raw_threat = norm_row.get("threat") or norm_row.get("risk") or norm_row.get("risk_score") or norm_row.get("score")
+        # parse numeric/textual risk into canonical label
+        normalized = _parse_risk_field(raw_threat) or normalize_threat(raw_threat)
+
+        # Compute numeric risk_score to store (preserve numeric if present,
+        # otherwise map textual labels to coarse scores via `risk_score()`)
+        numeric_score = None
+        if raw_threat is not None:
+            # try numeric parse first
+            try:
+                n = float(str(raw_threat).strip())
+                # clamp to 0-100 and store integer value
+                numeric_score = max(0, min(100, int(n)))
+            except Exception:
+                # textual -> use helper mapping
+                try:
+                    numeric_score = int(max(0, min(100, risk_score(str(raw_threat)))))
+                except Exception:
+                    numeric_score = None
         new_url = URL(
             url=url_value,
             domain=norm_row.get("domain") or norm_row.get("host"),
             threat=normalized,
+            risk_score=numeric_score,
             status=norm_row.get("status"),
             source=norm_row.get("source"),
         )
@@ -91,8 +140,8 @@ def export_csv(db: Session) -> str:
     output = StringIO()
     writer = csv.writer(output)
 
-    # CSV header
-    writer.writerow(["id", "url", "domain", "threat", "date_added", "status", "source"])
+    # CSV header (include risk_score if present)
+    writer.writerow(["id", "url", "domain", "threat", "risk_score", "date_added", "status", "source"])
 
     # CSV rows
     for item in urls:
@@ -101,6 +150,7 @@ def export_csv(db: Session) -> str:
             item.url,
             item.domain,
             item.threat,
+            item.risk_score if getattr(item, "risk_score", None) is not None else "",
             item.date_added.isoformat() if item.date_added is not None else "",
             item.status,
             item.source,

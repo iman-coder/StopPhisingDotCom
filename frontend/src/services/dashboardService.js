@@ -5,8 +5,8 @@ import { attachAuthHeader } from "./authService";
 // Ensure Authorization header is attached if token present
 attachAuthHeader();
 
-// Use relative path so dev server can proxy API calls to backend
-const API = "/dashboard";
+// Use `/api` prefix so dev/prod proxies forward API calls to the backend
+const API = "/api/dashboard";
 const USE_MOCKS = false; // ⬅ Switch to false to use real backend
 
 /* -------------------------------------------------------
@@ -58,9 +58,9 @@ const mockDailyActivity = [
 ];
 
 const mockTopRiskyUrls = [
-    { id: 1, url: "http://evil.com", risk: "malicious" },
-    { id: 2, url: "http://phish.co", risk: "malicious" },
-    { id: 3, url: "http://weird.xyz", risk: "suspicious" },
+    { id: 1, url: "http://evil.com", risk_score: 90, risk_description: "Very High" },
+    { id: 2, url: "http://phish.co", risk_score: 90, risk_description: "Very High" },
+    { id: 3, url: "http://weird.xyz", risk_score: 55, risk_description: "Medium" },
 ];
 
 const mockMostRecentUrls = [

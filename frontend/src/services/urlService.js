@@ -5,8 +5,8 @@ import { attachAuthHeader } from "./authService";
 // Ensure Authorization header is attached if token present
 attachAuthHeader();
 
-// Use relative path with trailing slash to avoid 307 redirects from FastAPI
-const API = "/urls/";
+// Use API prefix to avoid SPA route collisions; keep trailing slash to avoid 307 redirects
+const API = "/api/urls/";
 
 export async function getUrls() {
     // Accept parameters object: { query, page, per_page }

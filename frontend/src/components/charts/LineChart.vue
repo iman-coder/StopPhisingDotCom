@@ -18,15 +18,22 @@ const props = defineProps({
 const canvas = ref(null);
 let chartInstance = null;
 
+function safeArray(x) {
+  return Array.isArray(x) ? x : [];
+}
+
 onMounted(() => {
+  const labels = safeArray(props.labels);
+  const values = safeArray(props.values);
+
   chartInstance = new Chart(canvas.value, {
     type: "line",
     data: {
-      labels: props.labels,
+      labels: labels,
       datasets: [
         {
           label: "Activity",
-          data: props.values,
+          data: values,
           borderColor: "#2196f3",
           backgroundColor: "rgba(33,150,243,0.2)"
         }
@@ -37,10 +44,11 @@ onMounted(() => {
 });
 
 watch([() => props.labels, () => props.values], () => {
-  if (chartInstance) {
-    chartInstance.data.labels = props.labels;
-    chartInstance.data.datasets[0].data = props.values;
-    chartInstance.update();
-  }
+  if (!chartInstance) return;
+  const labels = safeArray(props.labels);
+  const values = safeArray(props.values);
+  chartInstance.data.labels = labels;
+  chartInstance.data.datasets[0].data = values;
+  chartInstance.update();
 });
 </script>

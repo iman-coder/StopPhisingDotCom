@@ -115,9 +115,11 @@ export function initAuthOnStartup() {
   attachAuthHeader();
   const t = getToken();
   if (t) {
-    // try to fetch current user to populate is_admin flag; failure is non-fatal
-    fetchCurrentUser().catch(() => {});
+    // try to fetch current user to populate is_admin flag; return the promise
+    // so callers can await the result and avoid racing protected requests.
+    return fetchCurrentUser().catch(() => {});
   }
+  return Promise.resolve();
 }
 
 export async function fetchCurrentUser() {

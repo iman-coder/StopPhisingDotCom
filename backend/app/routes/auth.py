@@ -12,8 +12,12 @@ import sys
 from datetime import datetime
 from app.utils.logger import get_logger
 import time
+from app.utils.rate_limit import rate_limit_dep
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# Rate limit for login: 5 attempts per minute, burst up to 5
+login_rate_dep = rate_limit_dep("auth:login", limit_per_minute=5, burst=5)
 
 
 def get_db():
@@ -24,7 +28,7 @@ def get_db():
         db.close()
 
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=Token, dependencies=[Depends(login_rate_dep)])
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not security.verify_password(form_data.password, user.hashed_password):
