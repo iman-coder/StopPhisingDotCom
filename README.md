@@ -195,10 +195,6 @@ Use `http://127.0.0.1:8000/docs` for the full OpenAPI schema and interactive tes
 - To add DB health checks or a wait-for script I can update `docker-compose.yml` and the backend entrypoint so the app only starts after the DB accepts connections.
 - To avoid secrets in repos for production, use Docker secrets or your platform's secret store.
 
-If you want, I can now:
-- create a local `./.env` from `.env.example` and bring the stack up, run migrations and test the dashboard endpoint, or
-- add a `wait-for-db` script and a Postgres healthcheck to `docker-compose.yml`.
-
 ---
 
 License: MIT-style (add `LICENSE` file to publish a formal license).
